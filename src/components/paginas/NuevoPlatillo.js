@@ -1,4 +1,4 @@
-import React, { useContext } from 'react';
+import React, { useContext, useState } from 'react';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { FirebaseContext } from '../../firebase';
@@ -6,6 +6,11 @@ import { useNavigate } from 'react-router-dom';
 import FileUploader from 'react-firebase-file-uploader';
 
 const NuevoPlatillo = () => {
+  // State para las imagenes
+  const [subiendo, setSubiendo] = useState(false);
+  const [progreso, setProgreso] = useState(0);
+  const [urlImagen, setUrlImagen] = useState('');
+
   // Context con las operaciones de firebase
   const {
     firebase: { db, storage },
@@ -37,6 +42,7 @@ const NuevoPlatillo = () => {
     onSubmit: (platillo) => {
       try {
         platillo.existencia = true;
+        platillo.imagen = urlImagen;
         db.collection('productos').add(platillo);
 
         navigate('/menu');
@@ -45,6 +51,28 @@ const NuevoPlatillo = () => {
       }
     },
   });
+
+  // Todo sobre las imagenes
+  const handleUploadStart = () => {
+    setProgreso(0);
+    setSubiendo(true);
+  };
+  const handleUploadError = (error) => {
+    setSubiendo(false);
+    console.log(error);
+  };
+  const handleUploadSuccess = async (nombre) => {
+    setProgreso(100);
+    setSubiendo(false);
+    //Almacenar la url de destino
+    const url = await storage.ref('productos').child(nombre).getDownloadURL();
+    setUrlImagen(url);
+  };
+  const handleProgress = (progreso) => {
+    setProgreso(progreso);
+    console.log(progreso);
+  };
+
   return (
     <>
       <h1 className="text-3xl font-light mb-4">Agregar Platillo</h1>
@@ -150,6 +178,10 @@ const NuevoPlatillo = () => {
                 name="imagen"
                 randomizeFilename
                 storageRef={storage.ref('productos')}
+                onUploadStart={handleUploadStart}
+                onUploadError={handleUploadError}
+                onUploadSuccess={handleUploadSuccess}
+                onProgress={handleProgress}
               />
             </div>
             <div className="mb-4">
